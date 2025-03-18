@@ -34,7 +34,8 @@ class Handler(BaseHTTPRequestHandler):
     def log_request_info(self):
         """Log information about the request."""
         client_ip = self.client_address[0] if hasattr(self, "client_address") else "Unknown"
-        logger.info(f"Request from {client_ip} to {self.path}")
+        path = self.path if hasattr(self, "path") else "Unknown"
+        logger.info(f"Request from {client_ip} to {path}")
     
     def check_authentication(self):
         """Check if the request is authenticated."""
@@ -90,7 +91,7 @@ class Handler(BaseHTTPRequestHandler):
         }
         
         # If the path contains 'openai', test the OpenAI API
-        if 'openai' in self.path:
+        if hasattr(self, "path") and 'openai' in self.path:
             try:
                 if not api_key:
                     response["openai_test"] = "Skipped - No API key"

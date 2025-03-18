@@ -37,7 +37,8 @@ class Handler(BaseHTTPRequestHandler):
     def log_request_info(self):
         """Log information about the request."""
         client_ip = self.client_address[0] if hasattr(self, "client_address") else "Unknown"
-        logger.info(f"Request from {client_ip} to {self.path}")
+        path = self.path if hasattr(self, "path") else "Unknown"
+        logger.info(f"Request from {client_ip} to {path}")
 
     def check_api_key(self):
         """Check if the request has a valid API key."""
@@ -104,6 +105,9 @@ class Handler(BaseHTTPRequestHandler):
     def parse_query_parameters(self):
         """Parse query parameters from the request path."""
         query_params = {}
+        if not hasattr(self, "path"):
+            return query_params
+            
         parsed_url = urlparse(self.path)
         parsed_query = parse_qs(parsed_url.query)
         for key, value in parsed_query.items():
@@ -114,6 +118,10 @@ class Handler(BaseHTTPRequestHandler):
         """Handle GET requests for token generation."""
         # Log request info
         self.log_request_info()
+        
+        if not hasattr(self, "path"):
+            self.send_error_response(500, "Internal server error: Missing path attribute")
+            return
         
         # Check API key authentication
         if not self.check_api_key():
@@ -143,6 +151,10 @@ class Handler(BaseHTTPRequestHandler):
         """Handle POST requests for token generation."""
         # Log request info
         self.log_request_info()
+        
+        if not hasattr(self, "path"):
+            self.send_error_response(500, "Internal server error: Missing path attribute")
+            return
         
         # Check API key authentication
         if not self.check_api_key():
