@@ -4,41 +4,79 @@ from http.server import BaseHTTPRequestHandler
 import os
 import json
 import requests
-import sys
-import importlib.util
+import logging
 
-# Add the parent directory to sys.path to allow importing security
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Try to import security module directly
-try:
-    from api.security import SecureHandlerMixin
-except ImportError:
-    # Fallback if direct import fails
-    # Define a minimal version of SecureHandlerMixin
-    class SecureHandlerMixin:
-        def add_cors_headers(self):
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-            self.send_header('Access-Control-Allow-Headers', 'X-API-Key, Content-Type, Authorization')
+class Handler(BaseHTTPRequestHandler):
+    def add_cors_headers(self):
+        """Add CORS headers to the response."""
+        # Get allowed origins from env, default to '*' for development
+        allowed_origins = os.environ.get("ALLOWED_ORIGINS", "*")
+        origin = self.headers.get("Origin", "")
         
-        def log_request_info(self):
-            client_ip = self.client_address[0]
-            print(f"Request from {client_ip} to {self.path}")
-
-class Handler(SecureHandlerMixin, BaseHTTPRequestHandler):
+        # If specific origins are set, check if the request origin is allowed
+        if allowed_origins != "*" and origin:
+            allowed_origin_list = allowed_origins.split(",")
+            if origin in allowed_origin_list:
+                self.send_header("Access-Control-Allow-Origin", origin)
+            else:
+                self.send_header("Access-Control-Allow-Origin", allowed_origin_list[0])
+        else:
+            # In development or if all origins are allowed
+            self.send_header("Access-Control-Allow-Origin", "*")
+            
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "X-API-Key, Content-Type, Authorization")
+    
+    def log_request_info(self):
+        """Log information about the request."""
+        client_ip = self.client_address[0] if hasattr(self, "client_address") else "Unknown"
+        logger.info(f"Request from {client_ip} to {self.path}")
+    
+    def check_authentication(self):
+        """Check if the request is authenticated."""
+        api_key = os.environ.get("API_SECRET_KEY")
+        if not api_key:
+            logger.warning("API_SECRET_KEY not set in environment")
+            return True  # Allow if key is not set (for testing)
+        
+        # Get the API key from the headers
+        provided_key = self.headers.get("X-API-Key", "")
+        if not provided_key:
+            logger.warning("No API key provided in request headers")
+            return False
+        
+        # Simple direct comparison for testing
+        return provided_key == api_key
+    
+    def do_OPTIONS(self):
+        """Handle OPTIONS requests for CORS preflight."""
+        self.send_response(200)
+        self.add_cors_headers()
+        self.end_headers()
+    
     def do_GET(self):
         """Handle GET requests."""
-        # Add CORS headers
+        # Log request info
+        self.log_request_info()
+        
+        # Check authentication
+        if not self.check_authentication():
+            self.send_response(401)
+            self.send_header('Content-type', 'application/json')
+            self.add_cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "Unauthorized. Invalid API key."}).encode())
+            return
+        
+        # Add headers
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.add_cors_headers()
         self.end_headers()
-        
-        # Log request info
-        self.log_request_info()
         
         api_key = os.environ.get("OPENAI_API_KEY")
         
@@ -48,7 +86,7 @@ class Handler(SecureHandlerMixin, BaseHTTPRequestHandler):
             "api_key_set": "Yes" if api_key else "No",
             "api_key_length": len(api_key) if api_key else 0,
             "vercel": os.environ.get("VERCEL", "Not set"),
-            "env_keys": list(os.environ.keys())
+            "env_keys": [k for k in os.environ.keys() if not k.lower().__contains__('key') and not k.lower().__contains__('secret')]
         }
         
         # If the path contains 'openai', test the OpenAI API
