@@ -12,12 +12,24 @@
         "runtime": "python3.9",
         "requirementsPath": "api/requirements-direct.txt"
       }
+    },
+    {
+      "src": "api/openai-test.py",
+      "use": "@vercel/python",
+      "config": {
+        "runtime": "python3.9",
+        "requirementsPath": "api/requirements-openai.txt"
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/test(.*)",
       "dest": "api/direct_test.py"
+    },
+    {
+      "src": "/api/openai-test(.*)",
+      "dest": "api/openai-test.py"
     },
     {
       "src": "/(.*)",
