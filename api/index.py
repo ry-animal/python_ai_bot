@@ -27,7 +27,7 @@ class Handler(BaseHTTPRequestHandler):
         
         api_key = os.environ.get("OPENAI_API_KEY")
         
-        if self.path == "/generate-debug":
+        if self.path.startswith("/generate-debug"):
             # Handle OpenAI test
             response = self._handle_openai_test()
         else:
@@ -49,29 +49,68 @@ class Handler(BaseHTTPRequestHandler):
             return {"error": "No OpenAI API key found in environment"}
         
         try:
-            # Import OpenAI
-            import openai
+            # Import OpenAI directly
+            # This ensures we're using the installed package, not any local module
+            import importlib
+            openai = importlib.import_module('openai')
             
-            # Initialize the client
-            client = openai.OpenAI(api_key=api_key)
-            
-            # Make a simple request
-            completion = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": "Tell me a short joke."}
-                ],
-                max_tokens=50
-            )
-            
-            joke = completion.choices[0].message.content
+            try:
+                # Initialize the client with minimal arguments and exception handling
+                logger.info("Initializing OpenAI client")
+                kwargs = {"api_key": api_key}
+                
+                # Create client with only api_key
+                client = openai.OpenAI(**kwargs)
+                
+                # Successfully created client
+                logger.info("Successfully created OpenAI client")
+                
+                # Make a simple request
+                logger.info("Making chat completion request")
+                completion = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": "Tell me a short joke."}
+                    ],
+                    max_tokens=50
+                )
+                
+                joke = completion.choices[0].message.content
+                return {
+                    "text": joke,
+                    "success": True
+                }
+            except TypeError as e:
+                logger.error(f"TypeError initializing client: {str(e)}")
+                if "proxies" in str(e):
+                    return {
+                        "text": "Error initializing client due to proxies issue",
+                        "error_detail": str(e),
+                        "error_type": "TypeError",
+                        "openai_version": openai.__version__
+                    }
+                return {
+                    "text": f"Error: {str(e)}",
+                    "error_type": "TypeError",
+                    "openai_version": openai.__version__
+                }
+            except Exception as e:
+                logger.error(f"Error making chat completion: {str(e)}")
+                return {
+                    "text": f"Error in chat completion: {str(e)}",
+                    "error_type": type(e).__name__,
+                    "openai_version": openai.__version__
+                }
+        except ImportError as e:
+            logger.error(f"ImportError: {str(e)}")
             return {
-                "text": joke,
-                "success": True
+                "text": f"Error importing OpenAI: {str(e)}",
+                "error_type": "ImportError"
             }
         except Exception as e:
+            logger.error(f"Unexpected error: {str(e)}")
             return {
-                "text": f"Error: {str(e)}",
+                "text": f"Unexpected error: {str(e)}",
                 "error_type": type(e).__name__
             } 
