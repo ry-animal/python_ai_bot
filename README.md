@@ -1,157 +1,122 @@
-# Python AI Bot
+# Python AI Bot API
 
-A Python project that uses OpenAI's API for text generation, with a RESTful API interface.
+A secure, serverless API for text generation using OpenAI's GPT models, deployed on Vercel.
 
-## Installation
+## Features
 
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/python_ai_bot.git
-cd python_ai_bot
-
-# Create a virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows, use: .venv\Scripts\activate
-
-# Install the package in development mode
-pip install -e .
-```
-
-## Configuration
-
-Set your OpenAI API key as an environment variable:
-
-```bash
-export OPENAI_API_KEY="your-api-key-here"
-```
-
-## Starting the API Server
-
-```bash
-# Start the server with default settings
-./start_server.py
-
-# Or with custom parameters
-./start_server.py --host 127.0.0.1 --port 5000 --reload
-```
-
-The API documentation will be available at http://localhost:8000/docs (or your custom port).
+- Direct integration with OpenAI API
+- Comprehensive security measures:
+  - API Key Authentication
+  - JWT Authentication
+  - Rate Limiting
+  - Input Validation
+  - CORS Support
+  - Request Logging
 
 ## API Endpoints
 
-The API provides the following endpoints:
+### Text Generation
 
-- `GET /`: Welcome message
-- `GET /health`: Health check endpoint
-- `POST /generate`: Generate text using OpenAI's API
+- `GET /generate-debug?prompt=<your_prompt>` - Generate text (for debugging)
+- `POST /generate` - Generate text with JSON body
 
-Example request to the `/generate` endpoint:
+Example POST request:
 
-```bash
-curl -X POST "http://localhost:8000/generate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "Write a poem about Python programming",
-    "model": "gpt-3.5-turbo",
-    "max_tokens": 150
-  }'
+```json
+{
+  "prompt": "Tell me a joke about programming"
+}
 ```
 
-## Using as a Python Module
+### Authentication
 
-You can also use the library programmatically:
+- `GET /auth?user_id=<user_id>` - Generate JWT token (requires API key)
+- `POST /auth` - Generate JWT token with JSON body
 
-```python
-from src.python_ai_bot.main import main
+Example POST request:
 
-# Generate text using OpenAI
-result = main(
-    prompt="What are the best practices for Python code?",
-    model="gpt-3.5-turbo",
-    max_tokens=100
-)
-print(result)
+```json
+{
+  "user_id": "your_user_id",
+  "api_key": "your_api_key"
+}
 ```
 
-You can also use the OpenAI client directly:
+### System Status
 
-```python
-from src.python_ai_bot.ai.openai_client import OpenAIClient
+- `GET /health` - Health check endpoint
+- `GET /api/test` - Environment info
+- `GET /api/test/openai` - Test OpenAI connectivity
 
-client = OpenAIClient()
-response = client.generate_text(
-    prompt="Write a poem about Python programming",
-    model="gpt-4",
-    max_tokens=200
-)
-print(response)
-```
+## Authentication Methods
 
-## Continuous Integration and Deployment
+The API supports two authentication methods:
 
-This project uses GitHub Actions for CI/CD:
+### 1. API Key Authentication
 
-- **Testing**: Runs pytest on every push and pull request
-- **Deployment**: Automatically deploys to Vercel when tests pass
-
-### Setting up Vercel Deployment
-
-1. Install Vercel CLI: `npm i -g vercel`
-2. Login to Vercel: `vercel login`
-3. Link this project: `vercel link`
-4. Deploy to Vercel: `vercel --prod`
-
-#### Setting up GitHub Secrets for Vercel Deployment
-
-For the GitHub Actions deployment to work, you need to set up the following secrets in your repository:
-
-1. `VERCEL_TOKEN`: Your Vercel API token
-2. `VERCEL_ORG_ID`: Your Vercel organization ID
-3. `VERCEL_PROJECT_ID`: Your Vercel project ID
-
-To get these values:
-
-```bash
-# For VERCEL_TOKEN
-vercel tokens create
-
-# For VERCEL_ORG_ID and VERCEL_PROJECT_ID
-cat .vercel/project.json
-```
-
-## Running Tests
-
-```bash
-pytest
-```
-
-## Project Structure
+Include your API key in the request headers:
 
 ```
-python_ai_bot/
-├── src/
-│   └── python_ai_bot/
-│       ├── ai/
-│       │   ├── __init__.py
-│       │   └── openai_client.py
-│       ├── __init__.py
-│       ├── main.py
-│       └── api.py
-├── tests/
-│   ├── __init__.py
-│   └── test_main.py
-├── .github/
-│   └── workflows/
-│       ├── test.yml
-│       └── deploy.yml
-├── api/
-│   ├── index.py
-│   └── requirements.txt
-├── .vercel/
-├── .venv/
-├── README.md
-├── requirements.txt
-├── setup.py
-├── vercel.json
-└── start_server.py
+X-API-Key: your_api_key
 ```
+
+### 2. JWT Authentication
+
+First, obtain a JWT token using the `/auth` endpoint with your API key. Then include the token in the request headers:
+
+```
+Authorization: Bearer your_jwt_token
+```
+
+## Setting Up Security
+
+### Environment Variables
+
+Set these environment variables in your Vercel project:
+
+- `OPENAI_API_KEY` - Your OpenAI API key
+- `API_SECRET_KEY` - Secret key for API authentication
+- `JWT_SECRET` - Secret key for JWT token signing
+- `ALLOWED_ORIGINS` - Comma-separated list of allowed origins for CORS (default: \*)
+
+### Rate Limiting
+
+The API has built-in rate limiting:
+
+- 10 requests per minute per IP address (configurable)
+
+### Input Validation
+
+All inputs are validated:
+
+- Maximum prompt length: 1000 characters
+- Minimum prompt length: 1 character
+
+## Deployment
+
+The API is designed to be deployed to Vercel:
+
+1. Fork this repository
+2. Create a new Vercel project
+3. Link your Vercel project to your forked repository
+4. Set the required environment variables
+5. Deploy!
+
+## Development
+
+1. Clone the repository
+2. Install dependencies: `pip install -r api/requirements.txt`
+3. Set environment variables
+4. Run locally with Vercel CLI: `vercel dev`
+
+## Security Best Practices
+
+1. Use HTTPS for all requests
+2. Rotate API keys and JWT secrets regularly
+3. Set up proper CORS restrictions in production
+4. Monitor logs for suspicious activity
+5. Keep dependencies updated
+
+## License
+
+MIT
