@@ -1,7 +1,8 @@
 """API server module for the project."""
 
 import logging
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 
@@ -19,6 +20,15 @@ app = FastAPI(
     title="Python AI Bot API",
     description="API for generating text using OpenAI",
     version="0.1.0",
+)
+
+# Add CORS middleware to allow cross-origin requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
 )
 
 
@@ -58,6 +68,38 @@ async def generate_text(request: PromptRequest):
             prompt=request.prompt,
             model=request.model,
             max_tokens=request.max_tokens
+        )
+        return TextResponse(text=result)
+    except Exception as e:
+        logger.error(f"Error generating text: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating text: {str(e)}",
+        )
+
+
+@app.get("/generate-debug", response_model=TextResponse)
+async def generate_text_debug(
+    prompt: str = Query(..., description="The text prompt to generate from"),
+    max_tokens: int = Query(100, description="Maximum number of tokens to generate"),
+    model: str = Query("gpt-3.5-turbo", description="The model to use")
+):
+    """Debug endpoint for generating text using OpenAI's API (GET method for easier testing).
+    
+    Args:
+        prompt: The text prompt to generate from.
+        max_tokens: Maximum number of tokens to generate.
+        model: The model to use.
+        
+    Returns:
+        A response containing the generated text.
+    """
+    try:
+        logger.info(f"Received debug prompt: {prompt}")
+        result = main(
+            prompt=prompt,
+            model=model,
+            max_tokens=max_tokens
         )
         return TextResponse(text=result)
     except Exception as e:
