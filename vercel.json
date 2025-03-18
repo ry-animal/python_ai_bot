@@ -20,6 +20,14 @@
         "runtime": "python3.9",
         "requirementsPath": "api/requirements-openai.txt"
       }
+    },
+    {
+      "src": "api/langchain-test.py",
+      "use": "@vercel/python",
+      "config": {
+        "runtime": "python3.9",
+        "requirementsPath": "api/requirements-langchain.txt"
+      }
     }
   ],
   "routes": [
@@ -30,6 +38,10 @@
     {
       "src": "/api/openai-test(.*)",
       "dest": "api/openai-test.py"
+    },
+    {
+      "src": "/api/langchain-test(.*)",
+      "dest": "api/langchain-test.py"
     },
     {
       "src": "/(.*)",
