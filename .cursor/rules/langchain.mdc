@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+name: LangChain Specific Guidelines
+globs:
+- "**/langchain/*.py"
+---
+Implement modular code with reusable components and chain functionality.
+Leverage LangChain's custom modules for efficiency.
+Optimize for interactive data operations and large-scale chain processes.

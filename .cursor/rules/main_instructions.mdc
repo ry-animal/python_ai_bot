@@ -1,0 +1,14 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+name: Global Python Guidelines
+globs:
+- "**/*.py"
+---
+Use descriptive variable names. Prioritize readability and maintainability.
+Utilize logging for error handling and debugging.
+Follow best practices for Python project structure (e.g., src/, tests/).
+Use virtual environments for dependency management.

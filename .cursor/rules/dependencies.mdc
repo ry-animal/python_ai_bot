@@ -1,0 +1,15 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+name: Dependencies Management
+globs:
+- "requirements.txt"
+---
+Start the requirements.txt file with all necessary dependencies for the project.
+langchain
+numpy
+pandas
+scikit-learn
