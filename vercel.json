@@ -3,69 +3,37 @@
   "builds": [
     {
       "src": "api/index.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "runtime": "python3.9",
+        "requirementsPath": "api/requirements.txt"
+      }
     },
     {
       "src": "api/direct_test.py",
       "use": "@vercel/python",
       "config": {
         "runtime": "python3.9",
-        "requirementsPath": "api/requirements-direct.txt"
+        "requirementsPath": "api/requirements.txt"
       }
     },
     {
-      "src": "api/openai-test.py",
+      "src": "api/auth.py",
       "use": "@vercel/python",
       "config": {
         "runtime": "python3.9",
-        "requirementsPath": "api/requirements-openai.txt"
-      }
-    },
-    {
-      "src": "api/langchain-test.py",
-      "use": "@vercel/python",
-      "config": {
-        "runtime": "python3.9",
-        "requirementsPath": "api/requirements-langchain.txt"
-      }
-    },
-    {
-      "src": "api/simple-test.py",
-      "use": "@vercel/python",
-      "config": {
-        "runtime": "python3.9",
-        "requirementsPath": "api/requirements-simple.txt"
-      }
-    },
-    {
-      "src": "api/openai-v0.py",
-      "use": "@vercel/python",
-      "config": {
-        "runtime": "python3.9",
-        "requirementsPath": "api/requirements-simple.txt"
+        "requirementsPath": "api/requirements.txt"
       }
     }
   ],
   "routes": [
     {
-      "src": "/api/test(.*)",
+      "src": "/api/test",
       "dest": "api/direct_test.py"
     },
     {
-      "src": "/api/openai-test(.*)",
-      "dest": "api/openai-test.py"
-    },
-    {
-      "src": "/api/langchain-test(.*)",
-      "dest": "api/langchain-test.py"
-    },
-    {
-      "src": "/api/simple-test(.*)",
-      "dest": "api/simple-test.py"
-    },
-    {
-      "src": "/api/openai-v0(.*)",
-      "dest": "api/openai-v0.py"
+      "src": "/api/auth",
+      "dest": "api/auth.py"
     },
     {
       "src": "/(.*)",
