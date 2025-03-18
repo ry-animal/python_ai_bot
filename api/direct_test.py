@@ -4,13 +4,19 @@ from http.server import BaseHTTPRequestHandler
 import os
 import json
 import requests
+from .security import SecureHandlerMixin
 
-class Handler(BaseHTTPRequestHandler):
+class Handler(SecureHandlerMixin, BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET requests."""
+        # Add CORS headers
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
+        self.add_cors_headers()
         self.end_headers()
+        
+        # Log request info
+        self.log_request_info()
         
         api_key = os.environ.get("OPENAI_API_KEY")
         

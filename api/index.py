@@ -5,6 +5,11 @@ import os
 import logging
 import json
 from http.server import BaseHTTPRequestHandler
+from urllib.parse import parse_qs, urlparse
+import requests
+
+# Import security module
+from .security import SecureHandlerMixin, validate_input
 
 # Configure logging
 logging.basicConfig(
@@ -15,21 +20,62 @@ logger = logging.getLogger(__name__)
 
 # Log environment variables for debugging (excluding sensitive values)
 logger.info("Vercel environment: %s", os.environ.get("VERCEL", "Not set"))
-logger.info("Environment variables set: %s", list(filter(lambda k: not k.startswith("OPENAI_"), os.environ.keys())))
+logger.info("Environment variables set: %s", list(filter(lambda k: not k.startswith(("OPENAI_", "API_SECRET", "JWT_")), os.environ.keys())))
 logger.info("OPENAI_API_KEY set: %s", "Yes" if os.environ.get("OPENAI_API_KEY") else "No")
+logger.info("API_SECRET_KEY set: %s", "Yes" if os.environ.get("API_SECRET_KEY") else "No")
+logger.info("JWT_SECRET set: %s", "Yes" if os.environ.get("JWT_SECRET") else "No")
 
-class Handler(BaseHTTPRequestHandler):
+class Handler(SecureHandlerMixin, BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET requests."""
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.end_headers()
+        # Handle OPTIONS requests for CORS
+        if self.command == 'OPTIONS':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.add_cors_headers()
+            self.end_headers()
+            return
         
+        # Check authentication
+        is_authenticated, error_message, status_code = self.check_authentication()
+        if not is_authenticated:
+            self.send_error_response(status_code, error_message)
+            return
+        
+        # Get API key
         api_key = os.environ.get("OPENAI_API_KEY")
         
+        # Parse query parameters
+        query_params = self.parse_query_parameters()
+        
+        # Handle request based on path
         if self.path.startswith("/generate-debug"):
-            # Handle OpenAI test
-            response = self._handle_openai_test()
+            # Handle OpenAI test with prompt validation
+            prompt = query_params.get("prompt", "Tell me a short joke")
+            is_valid, error_message = validate_input(prompt)
+            
+            if not is_valid:
+                self.send_error_response(400, error_message)
+                return
+                
+            response = self._handle_openai_test(prompt)
+        elif self.path.startswith("/auth/token"):
+            # Handle token generation (for demo/testing purposes only)
+            # In production, you would have a proper authentication flow
+            user_id = query_params.get("user_id")
+            if not user_id:
+                self.send_error_response(400, "Missing user_id parameter")
+                return
+                
+            token = self.jwt_auth.generate_token(user_id)
+            if not token:
+                self.send_error_response(500, "Failed to generate token")
+                return
+                
+            response = {"token": token}
+        elif self.path == "/health":
+            # Simple health check endpoint
+            response = {"status": "ok"}
         else:
             # Default response
             response = {
@@ -38,21 +84,77 @@ class Handler(BaseHTTPRequestHandler):
                 "api_key_length": len(api_key) if api_key else 0,
                 "vercel": os.environ.get("VERCEL", "Not set")
             }
-            
+        
+        # Send response
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.add_cors_headers()
+        self.end_headers()
         self.wfile.write(json.dumps(response).encode())
     
-    def _handle_openai_test(self):
-        """Handle OpenAI test."""
-        import importlib.util
-        import sys
-        import requests
+    def do_POST(self):
+        """Handle POST requests."""
+        # Handle OPTIONS requests for CORS
+        if self.command == 'OPTIONS':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.add_cors_headers()
+            self.end_headers()
+            return
         
+        # Check authentication
+        is_authenticated, error_message, status_code = self.check_authentication()
+        if not is_authenticated:
+            self.send_error_response(status_code, error_message)
+            return
+        
+        # Read request body
+        content_length = int(self.headers.get('Content-Length', 0))
+        post_data = self.rfile.read(content_length)
+        
+        try:
+            request_json = json.loads(post_data.decode('utf-8'))
+        except json.JSONDecodeError:
+            self.send_error_response(400, "Invalid JSON")
+            return
+        
+        # Handle request based on path
+        if self.path.startswith("/generate"):
+            # Handle OpenAI generation with prompt validation
+            prompt = request_json.get("prompt")
+            is_valid, error_message = validate_input(prompt)
+            
+            if not is_valid:
+                self.send_error_response(400, error_message)
+                return
+                
+            response = self._handle_openai_test(prompt)
+        else:
+            self.send_error_response(404, "Not found")
+            return
+        
+        # Send response
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.add_cors_headers()
+        self.end_headers()
+        self.wfile.write(json.dumps(response).encode())
+    
+    def do_OPTIONS(self):
+        """Handle OPTIONS requests."""
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.add_cors_headers()
+        self.end_headers()
+    
+    def _handle_openai_test(self, prompt="Tell me a short joke"):
+        """Handle OpenAI test."""
         api_key = os.environ.get("OPENAI_API_KEY")
         
         if not api_key:
             return {"error": "No OpenAI API key found in environment"}
         
-        # Fall back to using direct API request if OpenAI client fails
+        # Fall back to using direct API request
         try:
             headers = {
                 "Content-Type": "application/json",
@@ -63,9 +165,9 @@ class Handler(BaseHTTPRequestHandler):
                 "model": "gpt-3.5-turbo",
                 "messages": [
                     {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": "Tell me a short joke."}
+                    {"role": "user", "content": prompt}
                 ],
-                "max_tokens": 50
+                "max_tokens": 100
             }
             
             response = requests.post(
@@ -75,9 +177,9 @@ class Handler(BaseHTTPRequestHandler):
             )
             
             if response.status_code == 200:
-                joke = response.json()["choices"][0]["message"]["content"]
+                content = response.json()["choices"][0]["message"]["content"]
                 return {
-                    "text": joke,
+                    "text": content,
                     "success": True,
                     "method": "direct_api"
                 }
