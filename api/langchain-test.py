@@ -20,7 +20,7 @@ class Handler(BaseHTTPRequestHandler):
         else:
             try:
                 # Import LangChain components
-                from langchain.chat_models import ChatOpenAI
+                from langchain_openai import ChatOpenAI
                 from langchain_core.messages import HumanMessage, SystemMessage
                 
                 # Initialize the chat model
