@@ -37,9 +37,10 @@ coverage.xml
 # Environments
 .env
 .env.local
-.env.development
-.env.test
-.env.production
+.env.*
+.envrc
+*.env
+env.*
 
 # Logs
 logs/
