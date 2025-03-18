@@ -43,74 +43,54 @@ class Handler(BaseHTTPRequestHandler):
     
     def _handle_openai_test(self):
         """Handle OpenAI test."""
+        import importlib.util
+        import sys
+        import requests
+        
         api_key = os.environ.get("OPENAI_API_KEY")
         
         if not api_key:
             return {"error": "No OpenAI API key found in environment"}
         
+        # Fall back to using direct API request if OpenAI client fails
         try:
-            # Import OpenAI directly
-            # This ensures we're using the installed package, not any local module
-            import importlib
-            openai = importlib.import_module('openai')
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}"
+            }
             
-            try:
-                # Initialize the client with minimal arguments and exception handling
-                logger.info("Initializing OpenAI client")
-                kwargs = {"api_key": api_key}
-                
-                # Create client with only api_key
-                client = openai.OpenAI(**kwargs)
-                
-                # Successfully created client
-                logger.info("Successfully created OpenAI client")
-                
-                # Make a simple request
-                logger.info("Making chat completion request")
-                completion = client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": "You are a helpful assistant."},
-                        {"role": "user", "content": "Tell me a short joke."}
-                    ],
-                    max_tokens=50
-                )
-                
-                joke = completion.choices[0].message.content
+            payload = {
+                "model": "gpt-3.5-turbo",
+                "messages": [
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": "Tell me a short joke."}
+                ],
+                "max_tokens": 50
+            }
+            
+            response = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers=headers,
+                json=payload
+            )
+            
+            if response.status_code == 200:
+                joke = response.json()["choices"][0]["message"]["content"]
                 return {
                     "text": joke,
-                    "success": True
+                    "success": True,
+                    "method": "direct_api"
                 }
-            except TypeError as e:
-                logger.error(f"TypeError initializing client: {str(e)}")
-                if "proxies" in str(e):
-                    return {
-                        "text": "Error initializing client due to proxies issue",
-                        "error_detail": str(e),
-                        "error_type": "TypeError",
-                        "openai_version": openai.__version__
-                    }
+            else:
                 return {
-                    "text": f"Error: {str(e)}",
-                    "error_type": "TypeError",
-                    "openai_version": openai.__version__
+                    "text": f"API Error: {response.status_code} - {response.text}",
+                    "error_type": "APIError",
+                    "method": "direct_api"
                 }
-            except Exception as e:
-                logger.error(f"Error making chat completion: {str(e)}")
-                return {
-                    "text": f"Error in chat completion: {str(e)}",
-                    "error_type": type(e).__name__,
-                    "openai_version": openai.__version__
-                }
-        except ImportError as e:
-            logger.error(f"ImportError: {str(e)}")
-            return {
-                "text": f"Error importing OpenAI: {str(e)}",
-                "error_type": "ImportError"
-            }
         except Exception as e:
-            logger.error(f"Unexpected error: {str(e)}")
+            logger.error(f"Error with direct API request: {str(e)}")
             return {
-                "text": f"Unexpected error: {str(e)}",
-                "error_type": type(e).__name__
+                "text": f"Error with direct API request: {str(e)}",
+                "error_type": type(e).__name__,
+                "method": "direct_api"
             } 
