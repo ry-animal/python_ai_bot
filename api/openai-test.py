@@ -3,7 +3,6 @@
 from http.server import BaseHTTPRequestHandler
 import os
 import json
-import openai
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -20,7 +19,10 @@ class Handler(BaseHTTPRequestHandler):
             }
         else:
             try:
-                # Simple direct test
+                # Using the newer OpenAI client
+                import openai
+                
+                # Direct initialization without proxies
                 client = openai.OpenAI(api_key=api_key)
                 
                 # Try a simple completion
@@ -43,7 +45,8 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 response = {
                     "error": str(e),
-                    "api_key_length": len(api_key)
+                    "api_key_length": len(api_key),
+                    "openai_version": openai.__version__ if 'openai' in globals() else "Not loaded"
                 }
         
         self.wfile.write(json.dumps(response).encode()) 
