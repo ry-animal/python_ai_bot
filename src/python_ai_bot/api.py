@@ -38,6 +38,7 @@ class PromptRequest(BaseModel):
     prompt: str
     max_tokens: Optional[int] = 100
     model: Optional[str] = "gpt-3.5-turbo"
+    use_mock_fallback: Optional[bool] = True
 
 
 class TextResponse(BaseModel):
@@ -67,7 +68,8 @@ async def generate_text(request: PromptRequest):
         result = main(
             prompt=request.prompt,
             model=request.model,
-            max_tokens=request.max_tokens
+            max_tokens=request.max_tokens,
+            use_mock_fallback=request.use_mock_fallback
         )
         return TextResponse(text=result)
     except Exception as e:
@@ -82,7 +84,8 @@ async def generate_text(request: PromptRequest):
 async def generate_text_debug(
     prompt: str = Query(..., description="The text prompt to generate from"),
     max_tokens: int = Query(100, description="Maximum number of tokens to generate"),
-    model: str = Query("gpt-3.5-turbo", description="The model to use")
+    model: str = Query("gpt-3.5-turbo", description="The model to use"),
+    use_mock_fallback: bool = Query(True, description="Whether to use mock responses if OpenAI fails")
 ):
     """Debug endpoint for generating text using OpenAI's API (GET method for easier testing).
     
@@ -90,6 +93,7 @@ async def generate_text_debug(
         prompt: The text prompt to generate from.
         max_tokens: Maximum number of tokens to generate.
         model: The model to use.
+        use_mock_fallback: Whether to use mock responses if OpenAI fails.
         
     Returns:
         A response containing the generated text.
@@ -99,7 +103,8 @@ async def generate_text_debug(
         result = main(
             prompt=prompt,
             model=model,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
+            use_mock_fallback=use_mock_fallback
         )
         return TextResponse(text=result)
     except Exception as e:

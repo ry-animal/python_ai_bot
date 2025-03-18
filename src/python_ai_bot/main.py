@@ -13,13 +13,14 @@ logger = logging.getLogger(__name__)
 from src.python_ai_bot.ai.openai_client import OpenAIClient
 
 
-def main(prompt="Tell me a short joke", model="gpt-3.5-turbo", max_tokens=100):
+def main(prompt="Tell me a short joke", model="gpt-3.5-turbo", max_tokens=100, use_mock_fallback=True):
     """Run the main function of the project.
     
     Args:
         prompt (str, optional): Prompt to send to OpenAI. Defaults to "Tell me a short joke".
         model (str, optional): Model to use. Defaults to "gpt-3.5-turbo".
         max_tokens (int, optional): Maximum number of tokens to generate. Defaults to 100.
+        use_mock_fallback (bool, optional): Whether to use mock responses if OpenAI fails. Defaults to True.
         
     Returns:
         str: Generated text from OpenAI.
@@ -35,7 +36,7 @@ def main(prompt="Tell me a short joke", model="gpt-3.5-turbo", max_tokens=100):
     response = client.generate_text(prompt, model=model, max_tokens=max_tokens)
     
     # If there's an error with OpenAI API, provide a mock response for demonstration
-    if response.startswith("Error:"):
+    if response.startswith("Error:") and use_mock_fallback:
         logger.warning("Using mock response for demonstration")
         mock_responses = {
             "Tell me a short joke": "Why don't scientists trust atoms? Because they make up everything!",
