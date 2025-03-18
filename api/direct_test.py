@@ -4,7 +4,29 @@ from http.server import BaseHTTPRequestHandler
 import os
 import json
 import requests
-from .security import SecureHandlerMixin
+import sys
+import importlib.util
+
+# Add the parent directory to sys.path to allow importing security
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Try to import security module directly
+try:
+    from api.security import SecureHandlerMixin
+except ImportError:
+    # Fallback if direct import fails
+    # Define a minimal version of SecureHandlerMixin
+    class SecureHandlerMixin:
+        def add_cors_headers(self):
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', 'X-API-Key, Content-Type, Authorization')
+        
+        def log_request_info(self):
+            client_ip = self.client_address[0]
+            print(f"Request from {client_ip} to {self.path}")
 
 class Handler(SecureHandlerMixin, BaseHTTPRequestHandler):
     def do_GET(self):
