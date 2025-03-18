@@ -36,6 +36,14 @@
         "runtime": "python3.9",
         "requirementsPath": "api/requirements-simple.txt"
       }
+    },
+    {
+      "src": "api/openai-v0.py",
+      "use": "@vercel/python",
+      "config": {
+        "runtime": "python3.9",
+        "requirementsPath": "api/requirements-simple.txt"
+      }
     }
   ],
   "routes": [
@@ -54,6 +62,10 @@
     {
       "src": "/api/simple-test(.*)",
       "dest": "api/simple-test.py"
+    },
+    {
+      "src": "/api/openai-v0(.*)",
+      "dest": "api/openai-v0.py"
     },
     {
       "src": "/(.*)",
