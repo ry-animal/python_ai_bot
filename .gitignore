@@ -55,4 +55,7 @@ logs/
 
 # Project specific
 .cache/
-/site 
+/site
+
+# Vercel
+.vercel 

@@ -87,6 +87,38 @@ response = client.generate_text(
 print(response)
 ```
 
+## Continuous Integration and Deployment
+
+This project uses GitHub Actions for CI/CD:
+
+- **Testing**: Runs pytest on every push and pull request
+- **Deployment**: Automatically deploys to Vercel when tests pass
+
+### Setting up Vercel Deployment
+
+1. Install Vercel CLI: `npm i -g vercel`
+2. Login to Vercel: `vercel login`
+3. Link this project: `vercel link`
+4. Deploy to Vercel: `vercel --prod`
+
+#### Setting up GitHub Secrets for Vercel Deployment
+
+For the GitHub Actions deployment to work, you need to set up the following secrets in your repository:
+
+1. `VERCEL_TOKEN`: Your Vercel API token
+2. `VERCEL_ORG_ID`: Your Vercel organization ID
+3. `VERCEL_PROJECT_ID`: Your Vercel project ID
+
+To get these values:
+
+```bash
+# For VERCEL_TOKEN
+vercel tokens create
+
+# For VERCEL_ORG_ID and VERCEL_PROJECT_ID
+cat .vercel/project.json
+```
+
 ## Running Tests
 
 ```bash
@@ -108,9 +140,18 @@ python_ai_bot/
 ├── tests/
 │   ├── __init__.py
 │   └── test_main.py
+├── .github/
+│   └── workflows/
+│       ├── test.yml
+│       └── deploy.yml
+├── api/
+│   ├── index.py
+│   └── requirements.txt
+├── .vercel/
 ├── .venv/
 ├── README.md
 ├── requirements.txt
 ├── setup.py
+├── vercel.json
 └── start_server.py
 ```
